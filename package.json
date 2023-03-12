@@ -1,6 +1,7 @@
 {
   "name": "cowin-cli",
   "version": "1.0.0",
+  "type": "module",
   "description": "Covid-19 vaccination slots tracker for India",
   "main": "bin/index.js",
   "author": "rajput-hemant",

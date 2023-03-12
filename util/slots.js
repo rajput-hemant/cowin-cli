@@ -1,6 +1,9 @@
 import axios from "axios";
 import table from "tty-table";
 import chalk from "chalk";
+import inquirer from "inquirer";
+import notifier from "node-notifier";
+
 import { config, options } from "./config.js";
 
 export default async (districtId) => {
@@ -9,6 +12,20 @@ export default async (districtId) => {
       .toLocaleDateString("en-GB")
       .split("/")
       .join("-");
+
+    const answer = await inquirer.prompt([
+      {
+        type: "list",
+        name: "choice",
+        message: "Please choose age group",
+        choices: [
+          { name: "All Ages", value: "" },
+          { name: "45+", value: "45" },
+          { name: "18-45", value: "18" },
+        ],
+      },
+    ]);
+
     const response = await axios.get(
       `https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id=${districtId}&date=${currDate}`,
       config
@@ -53,17 +70,35 @@ export default async (districtId) => {
     let district = "";
     response.data.centers.forEach((item) => {
       district = item.district_name;
-
       item.sessions.forEach((session) => {
-        centers.push({
-          center: item.name,
-          address: item.address,
-          available: session.available_capacity,
-          age: session.min_age_limit,
-          date: session.date,
-        });
+        if (answer.choice == "") {
+          centers.push({
+            center: item.name,
+            address: item.address,
+            available: session.available_capacity,
+            age: session.min_age_limit,
+            date: session.date,
+          });
+        } else if (answer.choice == session.min_age_limit) {
+          centers.push({
+            center: item.name,
+            address: item.address,
+            available: session.available_capacity,
+            age: session.min_age_limit,
+            date: session.date,
+          });
+        }
       });
     });
+
+    if (centers.length == 0) {
+      notifier.notify({
+        title: "Cowin Slots",
+        message: "No available slots found!",
+      });
+      console.log(chalk.blue.blue("No available slots found!"));
+      process.exit(1);
+    }
 
     const out = table(header, centers, options).render();
 
